@@ -1,0 +1,61 @@
+<!-- @dsCard group="Components" viewport="700x300" name="Forms — field, input, select, toggles" subtitle="Labels, hints, errors, immutable fields, numeric inputs" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Form components</title>
+<link rel="stylesheet" href="../../styles.css" />
+<style>
+  body { background: var(--surface-page); padding: 16px 20px; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .col { display: flex; flex-direction: column; gap: 10px; }
+  .cap { font: var(--type-overline); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--text-muted); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="../../card-mount.js"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel">
+const NEED = ["Field","Input","Select","Checkbox","Switch","Textarea"];
+const DS = window.dsResolve(NEED) || {};
+const missing = NEED.filter(n => typeof DS[n] !== "function");
+
+const { Field, Input, Select, Checkbox, Switch, Textarea } = DS;
+function Demo() {
+  const [on, setOn] = React.useState(true);
+  const [mark, setMark] = React.useState(true);
+  return (
+    <div className="col" style={{ gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+        <Field label="Description" htmlFor="d1" required><Input placeholder="July accrual" /></Field>
+        <Field label="Amount" htmlFor="d2"><Input numeric suffix="USD" defaultValue="12,480.00" /></Field>
+        <Field label="Currency" htmlFor="d3" immutable><Input defaultValue="USD" disabled /></Field>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        <Field label="Fiscal period" htmlFor="d4" hint="Only open periods can receive postings.">
+          <Select placeholder="Select an open period" options={[{value:"7",label:"P07 · Jul 2026"},{value:"6",label:"P06 · Jun 2026 (closed)",disabled:true}]} />
+        </Field>
+        <Field label="Credit account" htmlFor="d5" error="Debit and credit accounts must differ.">
+          <Input defaultValue="1000 · Cash" />
+        </Field>
+      </div>
+      <Field label="Reversal reason" htmlFor="d6" required><Textarea rows={2} placeholder="Why is this entry being reversed?" /></Field>
+      <div className="row" style={{ gap: 24 }}>
+        <Checkbox checked={mark} onChange={() => setMark(!mark)} label="Mark for bulk transition" />
+        <Checkbox indeterminate label="Select all (partial)" />
+        <Checkbox disabled label="Approve (not permitted)" />
+        <Switch checked={on} onChange={() => setOn(!on)} label="Postable" />
+        <Switch checked={false} label="Reusable template" />
+      </div>
+    </div>
+  );
+}
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(missing.length ? React.createElement("p", { style: { font: "var(--type-body-sm)", color: "var(--text-muted)" } }, "Bundle not ready: " + missing.join(", ")) : React.createElement(Demo));
+</script>
+</body>
+</html>

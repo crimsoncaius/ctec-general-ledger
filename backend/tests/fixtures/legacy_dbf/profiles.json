@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "data_classification": "synthetic-no-real-personal-or-financial-data",
+  "generator": "scripts/generate_legacy_fixtures.py",
+  "profiles": {
+    "small": {
+      "description": "One balanced posted group and one balanced draft group.",
+      "periods": 1,
+      "account_pairs": 1,
+      "posted_groups": 1,
+      "include_drafts": true,
+      "expected_status": "apply_ready"
+    },
+    "medium": {
+      "description": "Twelve-period volume sample for reconciliation and timing checks.",
+      "periods": 12,
+      "account_pairs": 50,
+      "posted_groups": 250,
+      "include_drafts": true,
+      "expected_status": "apply_ready"
+    },
+    "corrupt": {
+      "description": "Duplicate account, orphan transaction, invalid period and unbalanced group.",
+      "periods": 1,
+      "account_pairs": 1,
+      "posted_groups": 1,
+      "include_drafts": true,
+      "faults": ["duplicate_account", "orphan_transaction", "invalid_period", "unbalanced_group"],
+      "expected_status": "blocked"
+    },
+    "boundary": {
+      "description": "Eighteen periods, maximum supported calendar, titles, retained earnings and report definitions.",
+      "periods": 18,
+      "account_pairs": 2,
+      "posted_groups": 18,
+      "include_drafts": true,
+      "include_reports": true,
+      "include_title_and_retained_earnings": true,
+      "expected_status": "apply_ready"
+    }
+  }
+}

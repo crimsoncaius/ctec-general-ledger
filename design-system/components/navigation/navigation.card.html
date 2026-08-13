@@ -1,0 +1,57 @@
+<!-- @dsCard group="Components" viewport="700x340" name="Navigation — company, sidebar, header, tabs" subtitle="Company context, capability-driven nav, page header, tabs" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Navigation components</title>
+<link rel="stylesheet" href="../../styles.css" />
+<style>
+  body { background: var(--surface-page); padding: 16px 20px; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .col { display: flex; flex-direction: column; gap: 10px; }
+  .cap { font: var(--type-overline); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--text-muted); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="../../card-mount.js"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel">
+const NEED = ["CompanySwitcher","SidebarNav","PageHeader","Tabs","Button"];
+const DS = window.dsResolve(NEED) || {};
+const missing = NEED.filter(n => typeof DS[n] !== "function");
+
+const { CompanySwitcher, SidebarNav, PageHeader, Tabs, Button } = DS;
+function Demo() {
+  const [tab, setTab] = React.useState("drafts");
+  const [active, setActive] = React.useState("journals");
+  return (
+    <div className="col" style={{ gap: 12 }}>
+      <div style={{ background: "var(--surface-header)", borderRadius: "var(--radius-md)", padding: "8px 12px", display: "flex", alignItems: "center", gap: 12 }}>
+        <span style={{ font: "var(--type-label)", color: "var(--text-inverse)", letterSpacing: "var(--tracking-wide)" }}>CTec Ledger</span>
+        <CompanySwitcher company="Northstar Manufacturing" code="NORTHSTAR-01" role="Approver"
+          memberships={[{company:"Northstar Manufacturing",code:"NORTHSTAR-01",role:"Approver"},{company:"Harbour Logistics",code:"HARBOUR-02",role:"Preparer"}]} />
+      </div>
+      <div style={{ display: "flex", gap: 12, background: "var(--surface-card)", border: "1px solid var(--border-hairline)", borderRadius: "var(--radius-md)", overflow: "hidden", height: 216 }}>
+        <SidebarNav activeId={active} onNavigate={setActive} style={{ width: 200, borderRadius: 0 }} groups={[
+          { label: "Books", items: [{id:"overview",label:"Overview",icon:"layout-dashboard"},{id:"accounts",label:"Accounts",icon:"list-tree",readOnly:true}] },
+          { label: "Ledger", items: [{id:"journals",label:"Journals",icon:"file-stack",badge:6},{id:"inquiry",label:"Posted inquiry",icon:"search"}] },
+          { label: "Close", items: [{id:"fiscal",label:"Fiscal calendar",icon:"calendar-range"},{id:"close",label:"Budgets & close",icon:"scale"}] },
+        ]} />
+        <div style={{ flex: 1, minWidth: 0, paddingRight: 16 }}>
+          <PageHeader eyebrow="Ledger" title="Journal batches" dataState="refreshing" updatedAt="16:04 EDT" meta="FY2026 · 42 batches · USD"
+            actions={<Button variant="primary" size="sm" icon="plus">New draft</Button>} />
+          <Tabs activeId={tab} onChange={setTab} tabs={[{id:"drafts",label:"Drafts",count:6},{id:"validated",label:"Validated",count:2},{id:"posted",label:"Posted",count:148}]} />
+        </div>
+      </div>
+    </div>
+  );
+}
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(missing.length ? React.createElement("p", { style: { font: "var(--type-body-sm)", color: "var(--text-muted)" } }, "Bundle not ready: " + missing.join(", ")) : React.createElement(Demo));
+</script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!-- @dsCard group="Brand" viewport="700x160" name="Contrast and focus" subtitle="WCAG 2.2 AA; meaning never rests on colour alone" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { background: var(--surface-card); padding: 16px 20px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; }
+  .lbl { font: var(--type-overline); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--text-muted); }
+  .tok { font: var(--type-mono); font-size: var(--text-2xs); color: var(--text-muted); }
+  .sw { display: flex; flex-direction: column; gap: 4px; min-width: 78px; }
+  .chip { height: 42px; border-radius: var(--radius-sm); border: 1px solid rgba(23,27,34,0.08); }
+  .val { font: var(--type-mono); font-size: var(--text-2xs); color: var(--text-secondary); }
+  table { border-collapse: collapse; width: 100%; font: var(--type-body-sm); }
+  td, th { text-align: left; padding: 4px 10px 4px 0; vertical-align: baseline; }
+  
+</style>
+</head>
+<body>
+<table>
+<tr><th class="lbl">Pair</th><th class="lbl">Ratio</th><th class="lbl">Use</th></tr>
+<tr><td style="font:var(--type-body-sm)">n-900 on n-0</td><td class="val">16.1:1</td><td style="font:var(--type-caption);color:var(--text-muted)">body and headings</td></tr><tr><td style="font:var(--type-body-sm)">n-600 on n-0</td><td class="val">6.4:1</td><td style="font:var(--type-caption);color:var(--text-muted)">secondary text</td></tr><tr><td style="font:var(--type-body-sm)">n-500 on n-0</td><td class="val">4.8:1</td><td style="font:var(--type-caption);color:var(--text-muted)">muted text, hints</td></tr><tr><td style="font:var(--type-body-sm)">n-0 on blue-500</td><td class="val">7.1:1</td><td style="font:var(--type-caption);color:var(--text-muted)">primary button</td></tr><tr><td style="font:var(--type-body-sm)">green-700 on green-50</td><td class="val">7.9:1</td><td style="font:var(--type-caption);color:var(--text-muted)">posted / reconciled</td></tr><tr><td style="font:var(--type-body-sm)">red-700 on red-50</td><td class="val">8.4:1</td><td style="font:var(--type-caption);color:var(--text-muted)">failure</td></tr>
+</table>
+<p style="font:var(--type-caption);color:var(--text-muted);margin-top:8px">Ratios are design targets against the token values; re-measure after any palette change.</p>
+</body>
+</html>

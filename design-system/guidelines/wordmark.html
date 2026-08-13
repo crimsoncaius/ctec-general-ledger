@@ -1,0 +1,30 @@
+<!-- @dsCard group="Brand" viewport="700x120" name="Wordmark (placeholder)" subtitle="No logo was supplied — the name is set in type until one arrives" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { background: var(--surface-card); padding: 16px 20px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; }
+  .lbl { font: var(--type-overline); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--text-muted); }
+  .tok { font: var(--type-mono); font-size: var(--text-2xs); color: var(--text-muted); }
+  .sw { display: flex; flex-direction: column; gap: 4px; min-width: 78px; }
+  .chip { height: 42px; border-radius: var(--radius-sm); border: 1px solid rgba(23,27,34,0.08); }
+  .val { font: var(--type-mono); font-size: var(--text-2xs); color: var(--text-secondary); }
+  table { border-collapse: collapse; width: 100%; font: var(--type-body-sm); }
+  td, th { text-align: left; padding: 4px 10px 4px 0; vertical-align: baseline; }
+  
+</style>
+</head>
+<body>
+<div style="display:flex;align-items:center;gap:26px">
+  <span style="font:var(--weight-semibold) 22px/1 var(--font-sans);letter-spacing:0.04em;color:var(--text-primary)">CTec <span style="color:var(--text-accent)">Ledger</span></span>
+  <span style="display:inline-flex;align-items:center;gap:8px;background:var(--surface-header);border-radius:var(--radius-sm);padding:7px 11px">
+    <span style="display:grid;place-items:center;width:22px;height:22px;border-radius:var(--radius-xs);background:var(--blue-500);color:#fff;font:var(--weight-semibold) 10.5px/1 var(--font-mono)">NO</span>
+    <span style="font:var(--type-label);color:var(--text-inverse);letter-spacing:var(--tracking-wide)">CTec Ledger</span>
+  </span>
+  <span class="tok" style="max-width:220px">No mark was provided. Do not substitute an invented logo.</span>
+</div>
+</body>
+</html>

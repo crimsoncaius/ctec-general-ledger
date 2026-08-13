@@ -1,0 +1,67 @@
+services:
+  db:
+    image: postgres:16.4-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ctec_gl}
+      POSTGRES_USER: ${POSTGRES_USER:-ctec}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ctec_local_only}
+    ports:
+      - "${POSTGRES_PORT:-15432}:5432"
+    volumes:
+      - ctec_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ctec} -d ${POSTGRES_DB:-ctec_gl}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./backend
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-ctec}:${POSTGRES_PASSWORD:-ctec_local_only}@db:5432/${POSTGRES_DB:-ctec_gl}
+      JWT_SECRET: ${JWT_SECRET:-development-secret-change-before-use-123456}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      INLINE_OPERATION_JOBS: "false"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  worker:
+    build:
+      context: ./backend
+    command: ["python", "-m", "app.worker"]
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-ctec}:${POSTGRES_PASSWORD:-ctec_local_only}@db:5432/${POSTGRES_DB:-ctec_gl}
+      JWT_SECRET: ${JWT_SECRET:-development-secret-change-before-use-123456}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+    environment:
+      VITE_API_URL: http://localhost:8000/api/v1
+    ports:
+      - "5173:5173"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  ctec_pgdata:

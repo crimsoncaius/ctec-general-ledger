@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CTec Ledger design system</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  body { padding: 48px 40px 80px; }
+  main { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+  h1 { font: var(--type-display); letter-spacing: var(--tracking-tight); }
+  h2 { font: var(--type-h3); margin-bottom: 12px; }
+  p { font: var(--type-body); color: var(--text-secondary); max-width: 68ch; }
+  ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font: var(--type-body-sm); color: var(--text-secondary); }
+  .kicker { font: var(--type-overline); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--text-muted); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  .card { background: var(--surface-card); border: 1px solid var(--border-hairline); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); padding: 20px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="kicker">Design system</p>
+    <h1>CTec <span style="color: var(--text-accent)">Ledger</span></h1>
+    <p style="margin-top: 12px">Sober institutional interface language for a multi-company, capability-governed double-entry ledger. Correctness is visible, authority is legible, risk is proportionate, and nothing is lost.</p>
+  </header>
+
+  <section>
+    <h2>Start here</h2>
+    <div class="grid">
+      <a class="card" href="ui_kits/ledger/index.html" style="text-decoration: none">
+        <p class="kicker">UI kit</p>
+        <p style="font: var(--type-h3); color: var(--text-primary); margin: 6px 0">Ledger workspace</p>
+        <p style="font: var(--type-body-sm)">Seven click-through screens with a capability-set switcher.</p>
+      </a>
+      <a class="card" href="README.md" style="text-decoration: none">
+        <p class="kicker">Context</p>
+        <p style="font: var(--type-h3); color: var(--text-primary); margin: 6px 0">README.md</p>
+        <p style="font: var(--type-body-sm)">Audience, voice, visual direction, accessibility, caveats.</p>
+      </a>
+      <a class="card" href="SKILL.md" style="text-decoration: none">
+        <p class="kicker">Rules</p>
+        <p style="font: var(--type-h3); color: var(--text-primary); margin: 6px 0">SKILL.md</p>
+        <p style="font: var(--type-body-sm)">Tokens, components and the twelve non-negotiable rules.</p>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <h2>Foundations</h2>
+    <ul>
+      <li><code>styles.css</code> — single entry point, imports every token file</li>
+      <li><code>tokens/</code> — colour, typography, spacing, elevation, motion, density, base resets</li>
+      <li><code>guidelines/</code> — colour ramps, type scale, tabular figures, density comparison, elevation, motion, iconography, contrast</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Components</h2>
+    <ul>
+      <li><strong>Core</strong> — Icon, Button, IconButton, Card, Badge</li>
+      <li><strong>Forms</strong> — Field, Input, Textarea, Select, Checkbox, Switch</li>
+      <li><strong>Data</strong> — DataTable, AmountCell, StatusPill, DigestValue, KeyValueList</li>
+      <li><strong>Feedback</strong> — Banner, Dialog, ProgressBar, EmptyState</li>
+      <li><strong>Navigation</strong> — CompanySwitcher, SidebarNav, PageHeader, Tabs</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>

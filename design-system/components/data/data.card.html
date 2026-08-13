@@ -1,0 +1,60 @@
+<!-- @dsCard group="Components" viewport="700x340" name="Data — table, amounts, status, digest" subtitle="Debit/credit table, tabular amounts, status vocabulary, digests" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Data components</title>
+<link rel="stylesheet" href="../../styles.css" />
+<style>
+  body { background: var(--surface-page); padding: 16px 20px; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .col { display: flex; flex-direction: column; gap: 10px; }
+  .cap { font: var(--type-overline); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--text-muted); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="../../card-mount.js"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel">
+const NEED = ["DataTable","AmountCell","StatusPill","DigestValue","KeyValueList"];
+const DS = window.dsResolve(NEED) || {};
+const missing = NEED.filter(n => typeof DS[n] !== "function");
+
+const { DataTable, AmountCell, StatusPill, DigestValue, KeyValueList } = DS;
+function Demo() {
+  const rows = [
+    { code: "1000", name: "Cash and equivalents", debit: 12480, credit: 0 },
+    { code: "2100", name: "Accrued liabilities", debit: 0, credit: 12480 },
+    { code: "6400", name: "Professional fees", debit: 0, credit: -320.5 },
+  ];
+  return (
+    <div className="col" style={{ gap: 14 }}>
+      <div className="row" style={{ gap: 8 }}>
+        {["draft","validated","approved","posted","reconciled","exception","queued","running","succeeded","failed","trial","applied","compatible","partial","manual"].map(s => <StatusPill key={s} status={s} />)}
+      </div>
+      <div style={{ background: "var(--surface-card)", border: "1px solid var(--border-hairline)", borderRadius: "var(--radius-md)" }}>
+        <DataTable caption="Posted entry lines, period 07" columns={[
+          { key: "code", header: "Account", mono: true, width: "90px" },
+          { key: "name", header: "Name" },
+          { key: "debit", header: "Debit", numeric: true, render: r => <AmountCell value={r.debit} currency="USD" side="debit" /> },
+          { key: "credit", header: "Credit", numeric: true, render: r => <AmountCell value={r.credit} currency="USD" side="credit" /> },
+        ]} rows={rows} rowKey={r => r.code}
+        footRow={{ code: "", name: "Total", debit: <AmountCell value={12480} emphasis />, credit: <AmountCell value={12159.5} emphasis /> }} />
+      </div>
+      <KeyValueList columns={3} items={[
+        { label: "Entry", value: "JE-2026-000482", mono: true },
+        { label: "Posted", value: "2026-07-31 16:04 America/New_York", mono: true },
+        { label: "Content digest", value: <DigestValue value="9f2c41ab77de0031bb51c4e9a2f6d80cc1e5b34a9d77e0f2461a8bb35c07d9e14" truncate /> },
+      ]} />
+    </div>
+  );
+}
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(missing.length ? React.createElement("p", { style: { font: "var(--type-body-sm)", color: "var(--text-muted)" } }, "Bundle not ready: " + missing.join(", ")) : React.createElement(Demo));
+</script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+title = "CTec GL secret scanning"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Deterministic local-only credentials used by documented disposable fixtures"
+paths = [
+  '''(^|/)backend/tests/''',
+  '''(^|/)frontend/e2e/''',
+  '''(^|/)docs/(DEMO_DATA|USER_GUIDE|NON_FUNCTIONAL_TESTING)\.md$''',
+  '''(^|/)docker-compose\.stage6\.yml$''',
+]
+regexes = [
+  '''CTec-Demo-[A-Za-z0-9!-]+''',
+  '''stage6[-_a-zA-Z0-9]+''',
+  '''test-only-secret-that-is-longer-than-thirty-two-characters''',
+  '''e2e-only-secret-that-is-longer-than-thirty-two-characters''',
+]
+
+[[allowlists]]
+description = "Generated dependencies and evidence are not source inputs"
+paths = [
+  '''(^|/)\.venv/''',
+  '''(^|/)frontend/node_modules/''',
+  '''(^|/)frontend/dist/''',
+  '''(^|/)artifacts/''',
+]

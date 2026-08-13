@@ -1,0 +1,61 @@
+<!-- @dsCard group="Components" viewport="700x230" name="Core — buttons, badges, card" subtitle="Actions, icon buttons, badges and the workspace panel" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Core components</title>
+<link rel="stylesheet" href="../../styles.css" />
+<style>
+  body { background: var(--surface-page); padding: 16px 20px; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .col { display: flex; flex-direction: column; gap: 10px; }
+  .cap { font: var(--type-overline); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--text-muted); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="../../card-mount.js"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel">
+const NEED = ["Button","IconButton","Badge","Card","Icon"];
+const DS = window.dsResolve(NEED) || {};
+const missing = NEED.filter(n => typeof DS[n] !== "function");
+
+const { Button, IconButton, Badge, Card, Icon } = DS;
+function Demo() {
+  return (
+    <div className="col" style={{ gap: 14 }}>
+      <div className="row">
+        <Button variant="primary" icon="check">Post batch</Button>
+        <Button variant="secondary">Cancel</Button>
+        <Button variant="ghost" icon="refresh-cw">Refresh</Button>
+        <Button variant="danger" icon="alert-octagon">Execute close</Button>
+        <Button variant="primary" busy>Posting</Button>
+        <Button variant="secondary" disabled>Approve</Button>
+      </div>
+      <div className="row">
+        <Button size="sm">Small</Button>
+        <Button size="lg" variant="primary">Large</Button>
+        <IconButton icon="refresh-cw" label="Refresh" />
+        <IconButton icon="copy" label="Copy digest" selected />
+        <IconButton icon="trash-2" label="Delete draft" disabled />
+        <Badge mono>BATCH-000148</Badge>
+        <Badge tone="accent">v3</Badge>
+        <Badge tone="warning">Partial</Badge>
+        <Badge tone="danger">Blocking</Badge>
+        <Badge tone="success">Apply-ready</Badge>
+      </div>
+      <Card title="Trial balance" description="FY2026 · Period 07 · USD" actions={<Button size="sm" icon="download">Export</Button>} footer="12 rows · digest 9f2c…a41b">
+        <p style={{ font: "var(--type-body-sm)", color: "var(--text-secondary)" }}>Card body. Use padded={false} when the body is a table.</p>
+      </Card>
+    </div>
+  );
+}
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(missing.length ? React.createElement("p", { style: { font: "var(--type-body-sm)", color: "var(--text-muted)" } }, "Bundle not ready: " + missing.join(", ")) : React.createElement(Demo));
+</script>
+</body>
+</html>

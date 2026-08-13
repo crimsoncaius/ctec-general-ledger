@@ -1,0 +1,29 @@
+/* The brief requires comfortable and compact display preferences. Density is a scope,
+   not a separate token file: set data-density on any container to reprice row heights,
+   control padding and gaps beneath it. Type sizes do not change. */
+:root,
+[data-density="comfortable"] {
+  --row-h: 38px;
+  --row-pad-y: var(--space-4);
+  --row-pad-x: var(--space-5);
+  --control-h: 32px;
+  --control-h-sm: 26px;
+  --control-h-lg: 38px;
+  --control-pad-x: var(--space-5);
+  --card-pad: var(--space-7);
+  --stack-gap: var(--space-6);
+  --field-gap: var(--space-5);
+}
+
+[data-density="compact"] {
+  --row-h: 28px;
+  --row-pad-y: var(--space-2);
+  --row-pad-x: var(--space-4);
+  --control-h: 26px;
+  --control-h-sm: 22px;
+  --control-h-lg: 32px;
+  --control-pad-x: var(--space-4);
+  --card-pad: var(--space-5);
+  --stack-gap: var(--space-5);
+  --field-gap: var(--space-4);
+}

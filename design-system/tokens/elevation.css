@@ -1,0 +1,14 @@
+:root {
+  /* Surfaces separate by hairline first. Shadow is reserved for things that float
+     above the page: menus, drawers, dialogs, sticky table headers. */
+  --shadow-none: none;
+  --shadow-hairline: 0 0 0 1px var(--border-hairline);
+  --shadow-raised: 0 1px 2px rgba(23, 27, 34, 0.05);
+  --shadow-sticky: 0 1px 0 rgba(23, 27, 34, 0.08);
+  --shadow-menu: 0 4px 12px -2px rgba(23, 27, 34, 0.12), 0 0 0 1px rgba(23, 27, 34, 0.06);
+  --shadow-dialog: 0 16px 40px -8px rgba(23, 27, 34, 0.24), 0 0 0 1px rgba(23, 27, 34, 0.08);
+
+  --focus-ring: 0 0 0 2px var(--n-0), 0 0 0 4px var(--blue-500);
+  --focus-ring-inverse: 0 0 0 2px var(--n-900), 0 0 0 4px var(--blue-300);
+  --focus-ring-tight: 0 0 0 2px var(--blue-500);
+}

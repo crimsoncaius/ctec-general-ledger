@@ -1,0 +1,29 @@
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--surface-page);
+  color: var(--text-body);
+  font: var(--type-body);
+  letter-spacing: var(--tracking-normal);
+  text-wrap: pretty;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--text-link); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
+a:hover { color: var(--text-link-hover); }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-xs);
+}
+
+h1, h2, h3, h4 { margin: 0; color: var(--text-primary); }
+p { margin: 0; }
+
+/* Every financial figure is tabular. */
+[data-numeric], .ctec-numeric { font-feature-settings: var(--numeric-tabular); font-variant-numeric: tabular-nums; }
+
+::selection { background: var(--blue-100); }
