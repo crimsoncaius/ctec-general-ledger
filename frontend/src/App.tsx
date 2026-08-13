@@ -70,8 +70,8 @@ const PAGE_TITLES: Record<Page, string> = {
 };
 
 function Login({ onLogin }: { onLogin: (token: string, me: Me) => void }) {
-  const [email, setEmail] = useState("admin@example.com");
-  const [password, setPassword] = useState("CTec-Demo-Admin-2026!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
