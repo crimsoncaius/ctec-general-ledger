@@ -20,11 +20,12 @@ services:
   api:
     image: ctec-gl-api:stage6
     build:
-      context: ./backend
+      context: .
+      dockerfile: backend/Dockerfile
     command:
       - sh
       - -c
-      - alembic upgrade head && python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000
+      - alembic upgrade head && python -m app.test_seed && uvicorn app.main:app --host 0.0.0.0 --port 8000
     environment:
       ENVIRONMENT: test
       DATABASE_URL: postgresql+psycopg://ctec_stage6:stage6_local_only@db:5432/ctec_gl_stage6

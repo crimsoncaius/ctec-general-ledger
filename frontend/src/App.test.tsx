@@ -60,6 +60,8 @@ describe("CTec application shell", () => {
     const user = userEvent.setup();
     render(<App />);
     expect(screen.getByRole("heading", { name: /financial truth/i })).toBeVisible();
+    expect(screen.getByLabelText("Email")).toHaveValue("admin@example.com");
+    expect(screen.getByLabelText("Password")).toHaveValue("CTec-Demo-Admin-2026!");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
     expect(await screen.findByRole("heading", { name: "Acme Trading Pte Ltd" })).toBeVisible();
     expect(await screen.findByText("2", { selector: ".metric-grid strong" })).toBeVisible();

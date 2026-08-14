@@ -53,9 +53,10 @@ stable so local runs and CI can publish the same artifacts.
 
 ## Test data, isolation and evidence
 
-- The application seed supplies stable companies, accounts, 12/18-period calendars, users,
-  journals and budgets. The E2E bootstrap adds an isolated restricted viewer. Browser fixtures
-  expose administrator, preparer, approver, restricted, and deterministic per-test namespaces.
+- `python -m app.test_seed` supplies stable synthetic companies, accounts, 12/18-period calendars,
+  users, journals, and budgets. The E2E bootstrap adds an isolated restricted viewer. Browser
+  fixtures expose administrator, preparer, approver, restricted, and deterministic per-test
+  namespaces. The normal `app.seed` entry point is reserved for the packaged ALCAN legacy sample.
 - `TEST_DATABASE_URL` must name a database starting with `ctec_gl_e2e` for Playwright or
   `ctec_gl_test_` for pytest. Database setup is a command-line test utility, never a public API.
 - Override `E2E_API_PORT`, `E2E_WEB_PORT`, `E2E_BASE_URL`, `TEST_DATABASE_URL`,

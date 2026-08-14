@@ -14,6 +14,11 @@ these local-only identities:
 These passwords are deterministic fake-data credentials and must never be reused in a
 deployed environment.
 
+The normal seed exposes one company: `ALCAN · ALCAN GENERAL TRADING PTE LTD`. Its FY2003 calendar,
+chart, opening balances, posted February 2003 activity, original/base currency values, and legacy
+report sources come from the repository's read-only `GL_Data` snapshot. The migration history
+shows the dry run, source digest, normalization warnings, and atomic apply record.
+
 ## Company context
 
 The company picker shows only active memberships. Changing company reloads accounts,

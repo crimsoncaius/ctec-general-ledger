@@ -41,6 +41,9 @@ from app.services.legacy_reports import convert_legacy_report
 
 SUPPORTED_TABLES = {"GLACCNT", "GLACCNX", "GLMAIN", "GLTRANS", "GLGP", "GLREP"}
 TABLE_FILES = {f"{name}.{ext}" for name in SUPPORTED_TABLES for ext in ("DAT", "DBF")}
+CONFIG_FILE = "GLCOMP.SET"
+REPORT_TEMPLATE_DELIMITER = "$------------------REPORT STARTS BELOW-----------------------"
+CURRENCY_ALIASES = {"S$": "SGD", "US$": "USD"}
 MAX_ARCHIVE_BYTES = 100 * 1024 * 1024
 MAX_EXPANDED_BYTES = 250 * 1024 * 1024
 MAX_FILES = 40
@@ -91,6 +94,11 @@ def _canonical_digest(files: dict[str, bytes]) -> str:
     return digest.hexdigest()
 
 
+def _split_legacy_format(value: str) -> tuple[str, str]:
+    spec, delimiter, template = value.partition(REPORT_TEMPLATE_DELIMITER)
+    return spec.rstrip(), template.lstrip("\r\n") if delimiter else ""
+
+
 def extract_archive(
     archive: bytes,
 ) -> tuple[str, list[dict[str, Any]], dict[str, list[dict[str, Any]]]]:
@@ -127,12 +135,15 @@ def extract_archive(
     table_names = sorted({name.rsplit(".", 1)[0] for name in files if name in TABLE_FILES})
     if "GLACCNT" not in table_names or "GLMAIN" not in table_names:
         raise HTTPException(422, "Archive must contain GLACCNT.DAT/DBF and GLMAIN.DAT/DBF")
-    relevant = {
-        name: content
-        for name, content in files.items()
-        if name.rsplit(".", 1)[0] in table_names
-        and name.rsplit(".", 1)[-1] in {"DAT", "DBF", "DBT", "FPT"}
-    }
+    relevant = {}
+    for name, content in files.items():
+        stem, _, extension = name.rpartition(".")
+        if (
+            (stem in table_names and extension in {"DAT", "DBF", "DBT", "FPT"})
+            or name == CONFIG_FILE
+            or extension == "FMT"
+        ):
+            relevant[name] = content
     manifest = [
         {"name": name, "bytes": len(content), "sha256": hashlib.sha256(content).hexdigest()}
         for name, content in sorted(relevant.items())
@@ -156,6 +167,19 @@ def extract_archive(
                 tables[table_name] = [_normalize(dict(record)) for record in table]
             except Exception as exc:
                 raise HTTPException(422, f"Unable to read {filename}: {exc}") from exc
+    for name, content in sorted(relevant.items()):
+        if not name.endswith(".FMT"):
+            continue
+        raw = content.decode("cp1252", errors="replace").rstrip("\x1a")
+        spec, template = _split_legacy_format(raw)
+        tables.setdefault("GLREP", []).append(
+            {
+                "NAME": Path(name).stem,
+                "SOURCE_FILENAME": name,
+                "SPEC": spec,
+                "REP": template,
+            }
+        )
     return _canonical_digest(relevant), manifest, tables
 
 
@@ -167,7 +191,50 @@ def _severity(issues: list[dict[str, Any]]) -> str:
 
 def _currency(record: dict[str, Any], prefix: str, base: str) -> str:
     value = str(record.get(f"{prefix}_CURR" if prefix else "CURR", "") or "").strip().upper()
-    return value or base
+    return CURRENCY_ALIASES.get(value, value) or base
+
+
+def _raw_currency(record: dict[str, Any], prefix: str) -> str:
+    return str(record.get(f"{prefix}_CURR" if prefix else "CURR", "") or "").strip().upper()
+
+
+def _effective_group_key(payload: dict[str, Any], prefix: str = "") -> str:
+    migration_key = f"{prefix}_MIGRATION_KEY" if prefix else "MIGRATION_KEY"
+    return str(payload.get(migration_key) or payload.get("KEY") or "").strip()
+
+
+def _derive_posted_group_keys(
+    rows: list[MigrationStagingRecord],
+) -> dict[int, str]:
+    buckets: defaultdict[tuple[str, str, str, str], list[MigrationStagingRecord]] = defaultdict(
+        list
+    )
+    for row in rows:
+        if str(row.payload.get("KEY", "") or "").strip():
+            continue
+        signature = (
+            str(row.payload.get("M_PERIOD", "") or "").strip(),
+            str(row.payload.get("M_DATE", "") or "").strip(),
+            str(row.payload.get("M_REF", "") or "").strip(),
+            str(row.payload.get("M_GNAME", "") or "").strip(),
+        )
+        buckets[signature].append(row)
+    derived: dict[int, str] = {}
+    for signature, group in buckets.items():
+        debit = sum(
+            (_decimal(row.payload.get("M_DEBIT"), "M_DEBIT", []) for row in group), Decimal("0")
+        )
+        credit = sum(
+            (_decimal(row.payload.get("M_CREDIT"), "M_CREDIT", []) for row in group),
+            Decimal("0"),
+        )
+        if debit != credit or debit <= 0:
+            continue
+        material = json.dumps(signature, separators=(",", ":"), ensure_ascii=True)
+        key = f"AUTO-{hashlib.sha256(material.encode('ascii')).hexdigest()[:12].upper()}"
+        for row in group:
+            derived[row.source_record] = key
+    return derived
 
 
 def _records(
@@ -269,6 +336,16 @@ def stage_archive(
         if legacy_type == "R":
             retained += 1
         currency = _currency(payload, "", company.base_currency_code)
+        raw_currency = _raw_currency(payload, "")
+        if raw_currency and raw_currency != currency:
+            issues.append(
+                _issue(
+                    "currency_normalized",
+                    f"Legacy currency {raw_currency!r} is imported as {currency}",
+                    "CURR",
+                    blocking=False,
+                )
+            )
         if len(currency) != 3 or currency not in currencies:
             issues.append(
                 _issue("unknown_currency", f"Currency {currency!r} is not configured", "CURR")
@@ -310,11 +387,24 @@ def stage_archive(
     groups: defaultdict[str, list[MigrationStagingRecord]] = defaultdict(list)
     seen_recno: set[str] = set()
     fingerprints: set[str] = set()
+    derived_group_keys = _derive_posted_group_keys(by_table["GLMAIN"])
     for row in by_table["GLMAIN"]:
         payload = row.payload
         transaction_issues: list[dict[str, Any]] = []
         code = str(payload.get("M_ACC_CODE", "") or "").strip()
-        key = str(payload.get("KEY", "") or "").strip()
+        source_key = str(payload.get("KEY", "") or "").strip()
+        key = source_key or derived_group_keys.get(row.source_record, "")
+        if key and not source_key:
+            payload = {**payload, "MIGRATION_KEY": key}
+            row.payload = payload
+            transaction_issues.append(
+                _issue(
+                    "derived_group_key",
+                    f"Blank legacy KEY is imported as deterministic group {key}",
+                    "KEY",
+                    blocking=False,
+                )
+            )
         row.natural_key = key or None
         if code not in account_codes:
             transaction_issues.append(
@@ -354,6 +444,16 @@ def stage_archive(
                 )
             )
         currency = _currency(payload, "M", company.base_currency_code)
+        raw_currency = _raw_currency(payload, "M")
+        if raw_currency and raw_currency != currency:
+            transaction_issues.append(
+                _issue(
+                    "currency_normalized",
+                    f"Legacy currency {raw_currency!r} is imported as {currency}",
+                    "M_CURR",
+                    blocking=False,
+                )
+            )
         if len(currency) != 3 or currency not in currencies:
             transaction_issues.append(
                 _issue("unknown_currency", f"Currency {currency!r} is not configured", "M_CURR")
@@ -362,6 +462,17 @@ def stage_archive(
         if rate <= 0:
             transaction_issues.append(
                 _issue("invalid_exchange_rate", "Exchange rate must be positive", "M_EXRATE")
+            )
+        elif currency == company.base_currency_code and rate != 1:
+            payload = {**payload, "MIGRATION_EXRATE": "1"}
+            row.payload = payload
+            transaction_issues.append(
+                _issue(
+                    "base_currency_rate_normalized",
+                    f"Base-currency rate {rate} is imported as 1",
+                    "M_EXRATE",
+                    blocking=False,
+                )
             )
         if not key:
             transaction_issues.append(
@@ -538,7 +649,9 @@ def stage_archive(
         name = str(row.payload.get("NAME", "") or "").strip()
         row.natural_key = name or None
         conversion = convert_legacy_report(
-            str(row.payload.get("SPEC", "") or ""), str(row.payload.get("REP", "") or "")
+            f"* Title: {name or 'Imported legacy report'}\n"
+            f"{str(row.payload.get('SPEC', '') or '')}",
+            str(row.payload.get("REP", "") or ""),
         )
         row.payload = {
             **row.payload,
@@ -548,7 +661,7 @@ def stage_archive(
             else None,
         }
         row.issues = [
-            _issue("legacy_report_warning", warning, blocking=conversion.status == "manual")
+            _issue("legacy_report_warning", warning, blocking=False)
             for warning in conversion.warnings
         ]
         row.severity = _severity(row.issues)
@@ -715,11 +828,25 @@ def apply_run(db: Session, source: MigrationRun, user_id: uuid.UUID) -> Migratio
                     )
                 )
 
-    opening_lines: list[tuple[Account, Decimal]] = []
+    mirrors = {
+        str(row.payload.get("A_ACC_CODE", "") or "").strip(): row.payload
+        for row in by_table.get("GLACCNX", [])
+    }
+    opening_lines: list[tuple[Account, Decimal, Decimal, Decimal]] = []
     for row in by_table["GLACCNT"]:
         amount = Decimal(str(row.payload.get("OPEN_BAL", "0") or "0"))
         if amount:
-            opening_lines.append((account_map[str(row.payload["A_ACC_CODE"]).strip()], amount))
+            code = str(row.payload["A_ACC_CODE"]).strip()
+            account = account_map[code]
+            original = amount
+            rate = Decimal("1")
+            if account.currency_code != company.base_currency_code:
+                mirror = mirrors.get(code, {})
+                mirror_amount = Decimal(str(mirror.get("OPEN_BAL", "0") or "0"))
+                if mirror_amount and (mirror_amount > 0) == (amount > 0):
+                    original = mirror_amount
+                    rate = abs(amount / mirror_amount)
+            opening_lines.append((account, amount, original, rate))
     posted_batches = 0
     if opening_lines:
         first_period = min(period_map.values(), key=lambda value: value.period_no)
@@ -748,7 +875,7 @@ def apply_run(db: Session, source: MigrationRun, user_id: uuid.UUID) -> Migratio
         )
         db.add(entry)
         db.flush()
-        for index, (account, amount) in enumerate(opening_lines, 1):
+        for index, (account, amount, original, rate) in enumerate(opening_lines, 1):
             db.add(
                 JournalLine(
                     company_id=source.company_id,
@@ -756,10 +883,10 @@ def apply_run(db: Session, source: MigrationRun, user_id: uuid.UUID) -> Migratio
                     line_no=index,
                     account_id=account.id,
                     description="Legacy opening balance",
-                    currency_code=company.base_currency_code,
-                    exchange_rate=Decimal("1"),
-                    debit_original=max(amount, Decimal("0")),
-                    credit_original=max(-amount, Decimal("0")),
+                    currency_code=account.currency_code,
+                    exchange_rate=rate,
+                    debit_original=max(original, Decimal("0")),
+                    credit_original=max(-original, Decimal("0")),
                     debit_base=max(amount, Decimal("0")),
                     credit_base=max(-amount, Decimal("0")),
                 )
@@ -826,7 +953,7 @@ def apply_run(db: Session, source: MigrationRun, user_id: uuid.UUID) -> Migratio
 
     groups: defaultdict[str, list[MigrationStagingRecord]] = defaultdict(list)
     for row in by_table["GLMAIN"]:
-        groups[str(row.payload["KEY"]).strip()].append(row)
+        groups[_effective_group_key(row.payload)].append(row)
     for sequence, (key, group) in enumerate(sorted(groups.items()), 1):
         sample = group[0].payload
         period = period_map[int(sample["M_PERIOD"])]
@@ -861,7 +988,9 @@ def apply_run(db: Session, source: MigrationRun, user_id: uuid.UUID) -> Migratio
             debit = Decimal(str(payload.get("M_DEBIT", "0") or "0"))
             credit = Decimal(str(payload.get("M_CREDIT", "0") or "0"))
             currency = _currency(payload, "M", company.base_currency_code)
-            rate = Decimal(str(payload.get("M_EXRATE", "1") or "1"))
+            rate = Decimal(
+                str(payload.get("MIGRATION_EXRATE") or payload.get("M_EXRATE", "1") or "1")
+            )
             debit_original = (
                 Decimal(str(payload.get("M_DEBITX", "0") or "0"))
                 if currency != company.base_currency_code
@@ -898,20 +1027,21 @@ def apply_run(db: Session, source: MigrationRun, user_id: uuid.UUID) -> Migratio
     imported_reports = 0
     for row in by_table.get("GLREP", []):
         definition = row.payload.get("CONVERTED_DEFINITION")
-        if definition is not None and row.payload.get("CONVERSION_STATUS") != "manual":
-            db.add(
-                ReportDefinition(
-                    company_id=source.company_id,
-                    name=str(row.payload.get("NAME") or "Legacy report")[:160],
-                    report_type="legacy",
-                    definition=definition,
-                    conversion_status=str(row.payload["CONVERSION_STATUS"]),
-                    is_template=False,
-                    version=1,
-                    created_by_id=user_id,
-                )
+        db.add(
+            ReportDefinition(
+                company_id=source.company_id,
+                name=str(row.payload.get("NAME") or "Legacy report")[:160],
+                report_type="legacy",
+                definition=definition or {},
+                legacy_spec=str(row.payload.get("SPEC", "") or ""),
+                legacy_template=str(row.payload.get("REP", "") or ""),
+                conversion_status=str(row.payload["CONVERSION_STATUS"]),
+                is_template=False,
+                version=1,
+                created_by_id=user_id,
             )
-            imported_reports += 1
+        )
+        imported_reports += 1
     applied.counts = {
         **source.counts,
         "applied_accounts": len(account_map),

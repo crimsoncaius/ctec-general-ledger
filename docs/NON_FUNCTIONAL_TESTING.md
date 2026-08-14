@@ -43,8 +43,9 @@ Required versions and setup:
 - Node.js 22/npm for `npm audit --package-lock-only --audit-level=high`.
 - Trivy 0.65.0 on `PATH`; build `ctec-gl-api:stage6` and `ctec-gl-web:stage6` first.
 - Pinned `zaproxy/zap-stable:2.16.1` present locally. The ZAP runner authenticates to the isolated
-  API, selects ACME, injects bearer/company headers without writing them to evidence, imports the
-  OpenAPI contract, and fails on ZAP warnings or alerts.
+  API, selects ACME from the explicit `app.test_seed` synthetic fixture, injects bearer/company
+  headers without writing them to evidence, imports the OpenAPI contract, and fails on ZAP
+  warnings or alerts.
 
 ```powershell
 pip install -e ".\backend[dev]"

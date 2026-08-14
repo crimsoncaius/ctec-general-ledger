@@ -1,0 +1,161 @@
+*   BALANCE SHEET STATEMENT
+*
+*   Data Matrix Specification
+*   Current Balance               A/C Specification
+*   -----------------------------
+A:  [BC]
+*   ----------------------------- FIXED ASSETS
+0:  A-F01                       * Furniture, Fixture & Fittings
+1:  D-F01                       * Prov.Depreciation For FFF
+2:    =                         * FFF Book Value  
+3:  A-M01                       * Motor Vehicles
+4:  D-M01                       * Prov.Depreciation For MV
+5:    =                         * MV Book Value
+6:  A-E01                       * Office Equipment
+7:  D-E01                       * Prov.Depreciation For Office Equipment
+8:    =                         * Office Equipment Value
+9:  A-R01                       * Renovation 
+10: D-R01                       * Prov.Depreciation For Renovation
+11:   =                         * Renovation Book Value
+12: ^0A + 3A + 6A + 9A          * Total Fixed Asset Purchase Value
+13: ^1A + 4A + 7A + 10A         * Total Fixed Asset Depreciation
+14: ^12A + 13A                  * Net Fixed Asset Book Value
+15:   =                         
+*                                 CURRENT ASSETS
+16: B-C01                       * Cash In Hand
+17: B-B01                       * Bank-1 OCBC
+18: C-D01                       * Deposits
+19: B-P01                       * Prepayment
+20: B-S01                       * Finished Goods
+21: B-A01                       * AR-Trade Debtors Type 1      
+22: B-U01                       * Unexpired HP Interest
+23:  =                          * Net Current Assets
+24: ^14A + 23A                  * NET ASSETS
+25:  =                          * Dummy
+*                                 EQUITIES
+*                                 CURRENT LIABILITIES
+26: E-B03                       * Boh Hock Chuen
+27: E-B02                       * Tat Lee Finance
+28: E-C01                       * Sundry Accruals
+29: E-A01                       * AP-Trade Creditors 1 (ABC Corp.)
+30: E-A02                       * AP-Trade Creditors 2 (Other Creditors)
+31: E-I01                       * Provision For Taxation
+32:  =                          * Net Current Liabilities 
+*                                 CAPITAL & SHAREHOLDERS FUND
+33: G-S01                       * James Low A/C
+34: G-S02                       * Joanna Low A/C
+35: G-S03                       * William Sim A/C
+36: G-S04                       * George Goh A/C
+37: G-P01                       * Paid Up Capital
+38: G-P02                       * Profit & Loss Appropriation
+39:  =                          * 
+*                                 PROFIT & LOSS COMPUTATION
+40: J-O01                       * Opening Stock
+41: L-P01                       * Purchases Type 1
+42: K-C01                       * Closing Stock
+43: H-S01                       * Sales
+44: H-M01                       * Miscellaneous Income
+45: N-P01                       * Proceeds of Disposed Assets
+46: M-A01                       * Accounting Fee
+47: M-A02                       * Advertising & Promotion
+48: M-A03                       * Audit Fee
+49: M-B01                       * Bank Charges & Interest
+50: M-B02                       * Bad Debts
+51: M-C01                       * CPF Contribution
+52: M-C02                       * Carriage Inward
+53: M-C03                       * Carriage Outward
+54: M-C04                       * Customs Duty
+55: M-C05                       * Commission
+56: M-D01                       * Depreciation
+57: M-D02                       * Directors' Fee
+58: M-D03                       * Directors' Remuneration
+59: M-D04                       * Donation
+60: M-E01                       * Entertainment
+61: M-F01                       * Skill Development Fund
+62: M-G01                       * General Expenses
+63: M-H01                       * Hire Purchase Interest
+64: M-I01                       * Insurance (Staff)
+65: M-I02                       * Insurance (Office)
+66: M-I03                       * Insurance (Warehouse)
+67: M-L01                       * LC Charges
+68: M-L02                       * Legal Fee
+69: M-M01                       * Medical Expenses
+70: M-M02                       * Management Fee
+71: M-P01                       * Professional Fee
+72: M-P02                       * Postage & Stamps
+73: M-R01                       * Rent (Office)
+74: M-R02                       * Rent (Warehouse)
+75: M-R03                       * Repairs & Maintenance
+76: M-S01                       * Stationery & Printing
+77: M-S02                       * Secretarial Fee
+78: M-S03                       * Staff Salaries & Bonus
+79: M-S04                       * Staff Training
+80: M-T01                       * Transport
+81: M-T02                       * Travelling Expenses
+82: M-T03                       * Telephone Expenses
+83: M-U01                       * Upkeep of Motor Vehicles
+84: M-U02                       * Utilities
+85:   =                         * NET PROFIT FOR THE YEAR
+86: ^39A + 85A                  * TOTAL CAPITAL & SHAREHOLDER FUND
+87: ^32A + 86A                  * TOTAL EQUITIES
+$------------------REPORT STARTS BELOW-----------------------
+                                  ALCAN GENERAL TRADING PTE LTD
+                                  BALANCE SHEET AS AT &d
+
+
+                                       **** ASSETS ****
+
+FIXED ASSETS                                Amount S$           Amount S$            Amount S$
+------------                                ---------           ---------            ---------
+Furniture, Fixture & Fittings           !0A1(       !
+Less Provision for Depreciation         !1A1(       !       !2A1(       !
+                                        -------------
+Motor Vehicle - EX5885                  !3A1(       !
+Less Provision for Depreciation         !4A1(       !       !5A1(       !
+                                        -------------
+Office Equipment                        !6A1(       !
+Less Provision for Depreciation         !7A1(       !       !8A1(       !
+                                        -------------
+Renovation                              !9A1(       !
+Less Provision for Depreciation         !10A1(      !       !11A1(      !        !14A1(      !
+                                        -------------        -------------
+                                                                         
+CURRENT ASSETS
+--------------
+Cash In Hand                                                !16A1(      !
+OCBC                                                        !17A1(      !
+Deposits                                                    !18A1(      !
+Prepayment                                                  !19A1(      !
+Stock                                                       !20A1(      !
+Trade Debtor Control                                        !21A1(      !
+Unexpired HP Interest                                       !22A1(      !        !23A1(      !
+                                                            -------------        -------------
+TOTAL ASSETS                                                                     !24A1(      !   
+                                                                                 =============
+
+
+                                       **** EQUITIES ****
+
+LIABILITIES
+-----------
+Boh Hock Chuen                                              !26A1(      !
+Tat Lee Finance                                             !27A1(      !
+Sundry Accruals                                             !28A1(      !
+Trade Creditor-ABC Corporation                              !29A1(      !
+Other Creditors                                             !30A1(      !
+Provision for Taxation                                      !31A1(      !        !32A1(      !
+                                                            -------------
+
+CAPITAL & SHAREHOLDERS FUNDS
+----------------------------
+James Low A/C                                               !33A1(      !
+Joanna Low A/C                                              !34A1(      !
+William Sim A/C                                             !35A1(      !
+George Goh A/C                                              !36A1(      !
+Paid Up Capital                                             !37A1(      !
+Profit & Loss Appropriation                                 !38A1(      !
+Current Year (Profit)/Loss                                  !85A1(      !        !86A1(      !
+                                                            -------------        -------------
+                                                                                 !87A1(      !
+                                                                                 =============
+

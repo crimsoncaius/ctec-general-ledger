@@ -13,7 +13,8 @@ Before a trial or cutover:
 3. Copy the company data to a separate read-only staging location.
 4. ZIP the DBF files at the archive root, without subdirectories. Include at least
    `GLACCNT.DAT` and `GLMAIN.DAT`; also include `GLACCNX.DAT`, `GLGP.DAT`, `GLTRANS.DAT`,
-   `GLREP.DAT`, and matching `.DBT`/`.FPT` memo files when present.
+   `GLREP.DAT`, `GLCOMP.SET`, matching `.DBT`/`.FPT` memo files, and flat `.FMT` report sources
+   when present.
 5. Keep the source snapshot and its external backup checksum until cutover sign-off.
 
 ## Trial migration
@@ -30,6 +31,12 @@ reconciliations:
 - posted ledger debits equal credits;
 - every account's `BAL_n` equals posted detail for period `n`; and
 - every `CURR_BAL` equals `OPEN_BAL + sum(BAL_n)`.
+
+Recognized legacy symbols are normalized without changing the source payload (`S$` to `SGD` and
+`US$` to `USD`). A blank posted `KEY` is accepted only when rows sharing period, date, reference,
+and group name form a positive balanced group; the importer records its deterministic derived key
+as a warning. `.FMT` sources are split into specification and print-template evidence, with partial
+or manual conversions quarantined from execution until reviewed.
 
 Download the CSV exception report, correct issues in a safe copy or in the governed legacy
 system, take a new snapshot, and repeat. Do not modify staged payloads in PostgreSQL.
