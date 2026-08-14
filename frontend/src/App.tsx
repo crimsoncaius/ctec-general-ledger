@@ -69,9 +69,12 @@ const PAGE_TITLES: Record<Page, string> = {
   admin: "Administration and migration",
 };
 
+const DEMO_ADMIN_EMAIL = "admin@example.com";
+const DEMO_ADMIN_PASSWORD = "CTec-Demo-Admin-2026!";
+
 function Login({ onLogin }: { onLogin: (token: string, me: Me) => void }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState(DEMO_ADMIN_EMAIL);
+  const [password, setPassword] = useState(DEMO_ADMIN_PASSWORD);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -146,7 +149,7 @@ function Login({ onLogin }: { onLogin: (token: string, me: Me) => void }) {
             </Button>
           </form>
           <p className="local-note">
-            Credentials are never stored in this browser session.
+            Demo administrator credentials are prefilled for this public demonstration.
           </p>
         </div>
       </section>

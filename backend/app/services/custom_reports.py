@@ -13,7 +13,7 @@ from app.models import Account, Budget, Company, FiscalPeriod, PeriodBalance
 from app.schemas import CustomReportColumn, CustomReportDefinitionData
 from app.services.reporting import ReportData
 
-MAX_FORMULA_NODES = 100
+MAX_FORMULA_NODES = 200
 ALLOWED_FUNCTIONS = {"abs", "min", "max", "round"}
 
 

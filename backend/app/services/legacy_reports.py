@@ -4,6 +4,8 @@ import re
 from dataclasses import dataclass
 from typing import Literal
 
+from pydantic import ValidationError
+
 from app.schemas import (
     CustomReportColumn,
     CustomReportDefinitionData,
@@ -108,7 +110,7 @@ def _parse_row(number: int, text: str, state: LegacyParseState, line_no: int) ->
     if not content:
         state.rows.append(CustomReportRow(key=key, label="", kind="spacer"))
         return
-    if content == "=":
+    if content == "=" or content == f"{state.matrix}=":
         referenced = [
             row.key for row in state.rows[state.last_total_index :] if row.kind != "spacer"
         ]
@@ -200,12 +202,16 @@ def convert_legacy_report(spec: str, template: str = "") -> LegacyConversionPrev
             )
     if not state.columns or not state.rows:
         return LegacyConversionPreview(status="manual", definition=None, warnings=state.warnings)
-    definition = CustomReportDefinitionData(
-        title=title,
-        columns=state.columns,
-        rows=state.rows,
-        formatting={"decimals": 2, "legacy_source": True},
-    )
+    try:
+        definition = CustomReportDefinitionData(
+            title=title,
+            columns=state.columns,
+            rows=state.rows,
+            formatting={"decimals": 2, "legacy_source": True},
+        )
+    except ValidationError:
+        state.warnings.append("Legacy report exceeds the structured report safety limits")
+        return LegacyConversionPreview(status="manual", definition=None, warnings=state.warnings)
     return LegacyConversionPreview(
         status="partial" if state.warnings else "compatible",
         definition=definition,

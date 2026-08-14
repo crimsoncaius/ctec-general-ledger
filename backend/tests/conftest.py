@@ -41,7 +41,7 @@ os.environ["JWT_SECRET"] = "test-only-secret-that-is-longer-than-thirty-two-char
 from app.db import SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import Account, Company, FiscalPeriod, FiscalYear, User  # noqa: E402
-from app.seed import seed  # noqa: E402
+from app.test_seed import seed  # noqa: E402
 
 
 @pytest.fixture(scope="session", autouse=True)

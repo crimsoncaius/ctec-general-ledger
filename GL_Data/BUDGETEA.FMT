@@ -1,0 +1,119 @@
+*   STATEMENT OF EARNINGS
+*   (Compare Current Year-To-Date Balances with Current Year Budget Balances)
+*   Data Matrix Specification
+*                                 A/C Specification
+*   -----------------------------
+A:  [BL12]  [UL12]  [C1-C2]  [C2-C1]
+*   -----------------------------
+0:  J-O01                       * Opening Stock
+1:  [L-P01,L-P05]               * Purchases Type 1
+2:    =                         *     =
+3:  K-C01                       * Closing Stock
+4:  ^2A + 3A                    * Cost Of Goods Sold
+5:  [H-S01,H-S05]               * Sales
+6:  ^5A + 4A                    * Gross
+7:  H-M01                       * Miscellaneous Income
+8:  N-P01                       * Proceeds of Disposed Assets
+9:  ^8A + 7A                    * OTHER INCOME
+10: ^9A + 6A                    * GROSS PROFIT
+11:   =                         * Dummy
+*                                 GENERAL & ADMIN EXPENSES
+12: M-A01                       * Accounting Fee
+13: M-A03                       * Audit Fee
+14: M-B01                       * Bank Charges & Interest
+15: M-B02                       * Bad Debts
+16: M-C01                       * CPF Contribution
+17: M-C02                       * Carriage Inward
+18: M-C03                       * Carriage Outward
+19: M-C04                       * Customs Duty
+20: M-D01                       * Depreciation
+21: M-D02                       * Directors' Fee
+22: M-D03                       * Directors' Remuneration
+23: M-D04                       * Donation
+24: M-F01                       * Skill Development Fund
+25: M-G01                       * General Expenses
+26: M-H01                       * Hire Purchase Interest
+27: M-I01                       * Insurance (Staff)
+28: M-I02                       * Insurance (Office)
+29: M-I03                       * Insurance (Warehouse)
+30: M-L01                       * LC Charges
+31: M-L02                       * Legal Fee
+32: M-M01                       * Medical Expenses
+33: M-M02                       * Management Fee
+34: M-P01                       * Professional Fee
+35: M-P02                       * Postage & Stamps
+36: M-R01                       * Rent (Office)
+37: M-R02                       * Rent (Warehouse)
+38: M-R03                       * Repairs & Maintenance
+39: M-S01                       * Stationery & Printing
+40: M-S02                       * Secretarial Fee
+41: M-S04                       * Staff Training
+42: M-T02                       * Travelling Expenses
+43: M-T03                       * Telephone Expenses
+44: M-U01                       * Upkeep of Motor Vehicles
+45: M-U02                       * Utilities
+46:  =                          * Total General & Admin Expenses
+*                                 TOTAL SELLING EXPENSES
+47: M-A02                       * Advertising & Promotion
+48: M-C05                       * Commission
+49: M-E01                       * Entertainment
+50: M-S03                       * Staff Salary & Bonus
+51: M-T01                       * Transport 
+52:  =                          * Total Selling Expenses
+53: ^46A + 52A                  * Total Selling, General & Admin Expenses  
+54: ^6A + 53A                   * GROSS PROFIT LESS TOTAL EXPENSES
+55: ^9A + 54A                   * OTHER INCOME + GROSS PROFIT - TOTAL EXPENSES
+56: B-D01                       * Deferred Income Taxes
+57: E-I01                       * Provision for Taxes
+58: ^56A + 57A                  * Total Provision for Income Taxes
+59: ^55A + 58A                  * NET EARNING/LOSS FOR THE PERIOD  
+$------------------REPORT STARTS BELOW-----------------------
+                         
+                           ALCAN GENERAL TRADING PTE LTD
+
+                       STATEMENT OF EARNINGS AS AT &d
+
+
+                                                       YTD               YTD       Over(Under) 
+                                                    Actual            Budget            Budget
+                                             -------------     -------------     -------------
+                                                        S$                S$                S$
+
+REVENUE:
+   Sales                                     !5A1-       !     !5A2-       !     !5A3(       !  
+
+COST OF SALES:
+   Opening Inventory                         !0A1-       !     !0A2-       !     !0A4(       !
+   Purchases                                 !1A1-       !     !1A2-       !     !1A4(       ! 
+                                             -------------     -------------     ------------- 
+                                             !2A1-       !     !2A2-       !     !2A4(       !  
+   Less Closing Inventory                    !3A1-       !     !3A2-       !     !3A3(       ! 
+                                             -------------     -------------     ------------- 
+   Total Cost of Sales                       !4A1-       !     !4A2-       !     !4A4(       ! 
+                                             -------------     -------------     ------------- 
+
+GROSS (PROFIT)/LOSS                          !6A1(       !     !6A2(       !     !6A3(       !
+
+LESS SELLING, GENERAL & ADMIN EXPENSES       !53A1-      !     !53A2-      !     !53A4(      ! 
+                                             -------------     -------------     -------------  
+(EARNINGS)/LOSS FROM OPERATIONS              !54A1(      !     !54A2(      !     !54A3(      ! 
+
+OTHER INCOME & EXPENSES:
+   Micellaneous Income                       !7A1-       !     !7A2-       !     !7A3(       !
+   (Gain)/Loss on Sale of Fixed Assets       !8A1(       !     !8A2(       !     !8A3(       ! 
+                                             -------------     -------------     ------------- 
+                                             !9A1-       !     !9A2-       !     !9A3(       ! 
+                                             -------------     -------------     -------------  
+
+(EARNINGS)/LOSS BEFORE INCOME TAXES          !55A1(      !     !55A2(      !     !55A3(      !
+
+PROVISION FOR INCOME TAXES:
+   Current Income Taxes                      !56A1-      !     !56A2-      !     !56A4(      !
+   Deferred Income Taxes                     !57A1-      !     !57A2-      !     !57A4(      !
+                                             -------------     -------------     ------------- 
+                                             !58A1-      !     !58A2-      !     !58A4(      !  
+                                             -------------     -------------     -------------  
+
+NET (EARNING)/LOSS FOR THE PERIOD            !59A1(      !     !59A2(      !     !59A3(      ! 
+                                             =============     =============     ============= 
+

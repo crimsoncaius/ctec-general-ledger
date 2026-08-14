@@ -61,6 +61,7 @@ COMMANDS = {
         "backend/tests/test_legacy_migration.py",
         "backend/tests/test_legacy_archive_safety.py",
         "backend/tests/test_legacy_migration_matrix.py",
+        "backend/tests/test_legacy_sample.py",
         "--cov=app.services.legacy_dbf",
         "--cov-branch",
         "--cov-report=term-missing",

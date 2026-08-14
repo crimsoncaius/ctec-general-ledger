@@ -20,7 +20,9 @@ docker compose ps
 ```
 
 Open `http://localhost:5173`; API health is `http://localhost:8000/health`. The seed command is
-idempotent: it creates the complete deterministic demonstration only when no user exists.
+idempotent: it imports the packaged read-only ALCAN legacy sample only when no user exists. It
+does not clear or replace a populated volume. Automated test environments must invoke
+`python -m app.test_seed` instead.
 
 Graceful stop preserves the named PostgreSQL volume:
 

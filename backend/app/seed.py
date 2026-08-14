@@ -1,392 +1,248 @@
-import secrets
-import uuid
-from datetime import date, timedelta
-from decimal import Decimal
+from __future__ import annotations
 
-from sqlalchemy import select
+import io
+import os
+import secrets
+import zipfile
+from datetime import date, timedelta
+from pathlib import Path
+from typing import TypedDict
+
+from dbfread import DBF  # type: ignore[import-untyped]
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal
 from app.models import (
     Account,
-    AccountType,
-    Budget,
-    ClosingEvent,
     Company,
     Currency,
-    ExchangeRate,
     FiscalPeriod,
     FiscalYear,
     JournalBatch,
-    JournalEntry,
-    JournalLine,
-    JournalStatus,
     Membership,
     Permission,
+    ReportDefinition,
     Role,
     RolePermission,
     User,
 )
-from app.schemas import CloseRequest, ReversalRequest
 from app.security import hash_password
-from app.services.accounting import post_batch, reverse_entry
-from app.services.closing import close_fiscal_year
+from app.seed_support import CAPABILITIES, stable_id
+from app.services.legacy_dbf import apply_run, stage_archive
 
-NAMESPACE = uuid.UUID("58987ab5-ebf4-47c8-80ed-bf1d894a8040")
-
-
-def stable_id(name: str) -> uuid.UUID:
-    return uuid.uuid5(NAMESPACE, name)
-
-
-CAPABILITIES = [
-    ("accounts.create", "Create accounts", 1),
-    ("accounts.update", "Modify accounts", 2),
-    ("accounts.delete", "Deactivate unused accounts", 3),
-    ("accounts.view", "View chart and account inquiry", 4),
-    ("journals.inquire", "View posted transactions", 5),
-    ("budgets.manage", "Compare and edit budgets", 6),
-    ("accounts.import", "Import accounts", 7),
-    ("journals.create", "Create journal batches", 8),
-    ("journals.update", "Modify draft batches", 9),
-    ("journals.import", "Import journal batches", 10),
-    ("journals.delete", "Delete draft batches", 11),
-    ("journals.view", "Browse journal batches", 12),
-    ("journals.post", "Post approved journals", 13),
-    ("reports.saved", "View saved report runs", 14),
-    ("reports.chart", "Run chart of accounts", 15),
-    ("reports.trial_balance", "Run trial balance", 16),
-    ("reports.gl", "Run general ledger report", 17),
-    ("reports.groups", "Run journal group reports", 18),
-    ("reports.custom.run", "Run custom reports", 19),
-    ("reports.custom.design", "Design custom reports", 20),
-    ("fiscal.close", "Close and reopen fiscal years", 21),
-    ("integrity.run", "Run integrity and reconciliation checks", 22),
-    ("administration.organize", "Run maintenance jobs", 23),
-    ("migration.run", "Run legacy migration tools", 24),
-    ("company.manage", "Manage company options", 25),
-    ("users.manage", "Manage users and roles", 26),
-    ("preferences.manage", "Manage display preferences", 27),
-    ("audit.view", "View audit and operation history", 28),
-    ("fiscal.view", "View fiscal calendars", None),
-    ("fiscal.manage", "Manage fiscal calendars", None),
-    ("journals.validate", "Validate journal batches", None),
-    ("journals.approve", "Approve journal batches", None),
-    ("journals.self_approve", "Allow controlled self approval", None),
-    ("journals.reverse", "Reverse posted journal entries", None),
-    ("reports.run", "Run standard reports", None),
-]
+REQUIRED_FILES = ("GLACCNT.DAT", "GLMAIN.DAT", "GLCOMP.SET")
+PREPARER_CAPABILITIES = (
+    "accounts.view",
+    "fiscal.view",
+    "journals.create",
+    "journals.update",
+    "journals.view",
+    "journals.validate",
+    "journals.inquire",
+    "reports.run",
+)
+APPROVER_CAPABILITIES = (
+    "accounts.view",
+    "fiscal.view",
+    "journals.view",
+    "journals.approve",
+    "journals.post",
+    "journals.reverse",
+    "journals.inquire",
+    "reports.run",
+    "integrity.run",
+)
 
 
-def add_calendar(db, company: Company, label: str, start: date, periods: int) -> None:  # type: ignore[no-untyped-def]
+class LegacySettings(TypedDict):
+    company_name: str
+    periods: int
+    start_month: int
+    start_year: int
+    rounding_places: int
+
+
+def _legacy_data_directory(explicit: str | Path | None = None) -> Path:
+    candidates = []
+    if explicit is not None:
+        candidates.append(Path(explicit))
+    configured = os.getenv("LEGACY_DEMO_DATA_DIR")
+    if configured:
+        candidates.append(Path(configured))
+    candidates.append(Path("/app/legacy-demo"))
+    module_parents = Path(__file__).resolve().parents
+    if len(module_parents) > 3:
+        candidates.append(module_parents[3] / "GL_Data")
+    candidates.extend([Path.cwd() / "GL_Data", Path.cwd().parent / "GL_Data"])
+    for candidate in candidates:
+        resolved = candidate.resolve()
+        if all((resolved / name).is_file() for name in REQUIRED_FILES):
+            return resolved
+    searched = ", ".join(str(candidate) for candidate in candidates)
+    raise RuntimeError(f"Legacy demo data was not found; searched: {searched}")
+
+
+def _settings(source: Path) -> LegacySettings:
+    rows = list(
+        DBF(
+            str(source / "GLCOMP.SET"),
+            load=True,
+            ignore_missing_memofile=True,
+            char_decode_errors="replace",
+        )
+    )
+
+    def value(record_no: int) -> str:
+        return str(rows[record_no - 1]["VALUE"] or "").strip()
+
+    return {
+        "company_name": value(3) or "ALCAN GENERAL TRADING PTE LTD",
+        "periods": int(value(13) or "12"),
+        "start_month": int(value(14) or "2"),
+        "start_year": int(value(15) or "2003"),
+        "rounding_places": int(value(29) or "2"),
+    }
+
+
+def _archive(source: Path) -> bytes:
+    names = {
+        *REQUIRED_FILES,
+        "GLACCNX.DAT",
+        "GLGP.DAT",
+        "GLTRANS.DAT",
+        "GLREP.DAT",
+        *(path.name for path in source.glob("*.FMT")),
+    }
+    stream = io.BytesIO()
+    with zipfile.ZipFile(stream, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for name in sorted(names, key=str.upper):
+            path = source / name
+            if path.is_file():
+                archive.writestr(name, path.read_bytes())
+    return stream.getvalue()
+
+
+def _next_month(value: date) -> date:
+    return date(value.year + (value.month == 12), 1 if value.month == 12 else value.month + 1, 1)
+
+
+def _add_calendar(db: Session, company: Company, settings: LegacySettings) -> None:
+    periods = int(settings["periods"])
+    if periods != 12:
+        raise RuntimeError(
+            f"The packaged ALCAN sample must contain 12 fiscal periods, got {periods}"
+        )
+    start = date(int(settings["start_year"]), int(settings["start_month"]), 1)
+    period_starts = [start]
+    for _ in range(periods):
+        period_starts.append(_next_month(period_starts[-1]))
     fiscal_year = FiscalYear(
-        id=stable_id(f"{company.code}:fy:{label}"),
+        id=stable_id("ALCAN:fy:FY2003"),
         company_id=company.id,
-        label=label,
+        label="FY2003",
         start_date=start,
-        end_date=start + timedelta(days=periods * 28 - 1),
+        end_date=period_starts[-1] - timedelta(days=1),
     )
     db.add(fiscal_year)
     db.flush()
     for period_no in range(1, periods + 1):
-        period_start = start + timedelta(days=(period_no - 1) * 28)
         db.add(
             FiscalPeriod(
-                id=stable_id(f"{company.code}:{label}:period:{period_no}"),
+                id=stable_id(f"ALCAN:FY2003:period:{period_no}"),
                 company_id=company.id,
                 fiscal_year_id=fiscal_year.id,
                 period_no=period_no,
                 label=f"P{period_no:02d}",
-                start_date=period_start,
-                end_date=period_start + timedelta(days=27),
+                start_date=period_starts[period_no - 1],
+                end_date=period_starts[period_no] - timedelta(days=1),
             )
         )
 
 
-DemoLine = tuple[str, str, Decimal, Decimal, Decimal, Decimal, Decimal]
-
-
-def add_posted_demo(
+def _add_access_model(
     db: Session,
     company: Company,
-    user: User,
-    period: FiscalPeriod,
-    key: str,
-    description: str,
-    lines: list[DemoLine],
-) -> uuid.UUID:
-    accounts = {
-        account.code: account
-        for account in db.scalars(select(Account).where(Account.company_id == company.id)).all()
+    *,
+    admin_email: str,
+    admin_password: str,
+    admin_display_name: str,
+    disable_non_admin: bool,
+) -> User:
+    for code, description, legacy in CAPABILITIES:
+        db.add(Permission(code=code, description=description, legacy_number=legacy))
+    users = {
+        "admin": User(
+            id=stable_id("user:admin"),
+            email=admin_email.lower(),
+            display_name=admin_display_name,
+            password_hash=hash_password(admin_password),
+        ),
+        "preparer": User(
+            id=stable_id("user:preparer"),
+            email="preparer@example.com",
+            display_name="Priya Preparer",
+            password_hash=hash_password(
+                secrets.token_urlsafe(32) if disable_non_admin else "CTec-Demo-Prepare-2026!"
+            ),
+            active=not disable_non_admin,
+        ),
+        "approver": User(
+            id=stable_id("user:approver"),
+            email="approver@example.com",
+            display_name="Alex Approver",
+            password_hash=hash_password(
+                secrets.token_urlsafe(32) if disable_non_admin else "CTec-Demo-Approve-2026!"
+            ),
+            active=not disable_non_admin,
+        ),
     }
-    batch = JournalBatch(
-        id=stable_id(f"{company.code}:demo:batch:{key}"),
-        company_id=company.id,
-        batch_no=f"DEMO-{key}",
-        description=description,
-        status=JournalStatus.APPROVED,
-        created_by_id=user.id,
-        approved_by_id=user.id,
-    )
-    db.add(batch)
+    db.add_all(users.values())
     db.flush()
-    entry = JournalEntry(
-        id=stable_id(f"{company.code}:demo:entry:{key}"),
-        company_id=company.id,
-        batch_id=batch.id,
-        entry_no=f"DEMO-{key}",
-        entry_date=period.start_date + timedelta(days=4),
-        posting_date=period.start_date + timedelta(days=4),
-        fiscal_period_id=period.id,
-        reference=key,
-        description=description,
-        status=JournalStatus.APPROVED,
-        created_by_id=user.id,
-    )
-    db.add(entry)
-    db.flush()
-    for line_no, (
-        account_code,
-        currency,
-        rate,
-        debit_original,
-        credit_original,
-        debit_base,
-        credit_base,
-    ) in enumerate(lines, 1):
-        db.add(
-            JournalLine(
-                id=stable_id(f"{company.code}:demo:entry:{key}:line:{line_no}"),
-                company_id=company.id,
-                entry_id=entry.id,
-                line_no=line_no,
-                account_id=accounts[account_code].id,
-                description=description,
-                currency_code=currency,
-                exchange_rate=rate,
-                debit_original=debit_original,
-                credit_original=credit_original,
-                debit_base=debit_base,
-                credit_base=credit_base,
-            )
-        )
-    db.flush()
-    post_batch(db, company.id, batch.id, user.id)
-    return entry.id
-
-
-def add_deterministic_accounting_cycle(db: Session, company: Company, user: User) -> None:
-    years = list(
-        db.scalars(
-            select(FiscalYear)
-            .where(FiscalYear.company_id == company.id)
-            .order_by(FiscalYear.start_date)
-        ).all()
-    )
-    periods = {
-        (period.fiscal_year_id, period.period_no): period
-        for period in db.scalars(
-            select(FiscalPeriod).where(FiscalPeriod.company_id == company.id)
-        ).all()
-    }
-    first_year, next_year = years
-    p1 = periods[(first_year.id, 1)]
-    p2 = periods[(first_year.id, 2)]
-    p3 = periods[(first_year.id, 3)]
-    p4 = periods[(first_year.id, 4)]
-    next_p1 = periods[(next_year.id, 1)]
-    next_p2 = periods[(next_year.id, 2)]
-    accounts = {
-        account.code: account
-        for account in db.scalars(select(Account).where(Account.company_id == company.id)).all()
-    }
-    db.add(
-        ExchangeRate(
-            id=stable_id(f"{company.code}:demo:eur-rate"),
+    roles = {
+        name: Role(
+            id=stable_id(f"ALCAN:role:{name}"),
             company_id=company.id,
-            currency_code="EUR",
-            effective_date=p2.start_date,
-            rate_to_base=Decimal("1.5000000000"),
-            source="deterministic demo",
+            name=name.title(),
+            system=True,
         )
-    )
-    for period_no in range(1, 19):
-        period = periods[(first_year.id, period_no)]
-        db.add_all(
-            [
-                Budget(
-                    id=stable_id(f"{company.code}:demo:budget:revenue:{period_no}"),
-                    company_id=company.id,
-                    fiscal_period_id=period.id,
-                    account_id=accounts["4000"].id,
-                    scenario="Approved FY2026",
-                    currency_code=company.base_currency_code,
-                    amount=Decimal("-18000.000000"),
-                ),
-                Budget(
-                    id=stable_id(f"{company.code}:demo:budget:expense:{period_no}"),
-                    company_id=company.id,
-                    fiscal_period_id=period.id,
-                    account_id=accounts["5000"].id,
-                    scenario="Approved FY2026",
-                    currency_code=company.base_currency_code,
-                    amount=Decimal("3500.000000"),
-                ),
-            ]
-        )
-    db.commit()
-    add_posted_demo(
-        db,
-        company,
-        user,
-        p1,
-        "SALE-001",
-        "Normal cash sale",
-        [
-            (
-                "1000",
-                company.base_currency_code,
-                Decimal("1"),
-                Decimal("20000"),
-                Decimal("0"),
-                Decimal("20000"),
-                Decimal("0"),
-            ),
-            (
-                "4000",
-                company.base_currency_code,
-                Decimal("1"),
-                Decimal("0"),
-                Decimal("20000"),
-                Decimal("0"),
-                Decimal("20000"),
-            ),
-        ],
-    )
-    add_posted_demo(
-        db,
-        company,
-        user,
-        p2,
-        "FX-001",
-        "EUR expense at a fixed demonstration rate",
-        [
-            (
-                "6100",
-                "EUR",
-                Decimal("1.5"),
-                Decimal("1000"),
-                Decimal("0"),
-                Decimal("1500"),
-                Decimal("0"),
-            ),
-            (
-                "1000",
-                company.base_currency_code,
-                Decimal("1"),
-                Decimal("0"),
-                Decimal("1500"),
-                Decimal("0"),
-                Decimal("1500"),
-            ),
-        ],
-    )
-    adjustment_id = add_posted_demo(
-        db,
-        company,
-        user,
-        p3,
-        "ADJ-001",
-        "Accrual adjustment to be reversed",
-        [
-            (
-                "1100",
-                company.base_currency_code,
-                Decimal("1"),
-                Decimal("500"),
-                Decimal("0"),
-                Decimal("500"),
-                Decimal("0"),
-            ),
-            (
-                "4000",
-                company.base_currency_code,
-                Decimal("1"),
-                Decimal("0"),
-                Decimal("500"),
-                Decimal("0"),
-                Decimal("500"),
-            ),
-        ],
-    )
-    reverse_entry(
-        db,
-        company.id,
-        adjustment_id,
-        user.id,
-        ReversalRequest(
-            posting_date=p4.start_date + timedelta(days=4),
-            fiscal_period_id=p4.id,
-            reason="Deterministic next-period accrual reversal",
-        ),
-    )
-    close_fiscal_year(
-        db,
-        company.id,
-        first_year.id,
-        user.id,
-        CloseRequest(
-            opening_period_id=next_p1.id,
-            reason="Deterministic demonstration fiscal close",
-        ),
-    )
-    draft_batch = JournalBatch(
-        id=stable_id(f"{company.code}:demo:draft:batch"),
-        company_id=company.id,
-        batch_no="DEMO-PENDING",
-        description="Pending maker-checker accrual",
-        status=JournalStatus.DRAFT,
-        created_by_id=user.id,
-    )
-    db.add(draft_batch)
+        for name in ("administrator", "preparer", "approver")
+    }
+    db.add_all(roles.values())
     db.flush()
-    draft_entry = JournalEntry(
-        id=stable_id(f"{company.code}:demo:draft:entry"),
-        company_id=company.id,
-        batch_id=draft_batch.id,
-        entry_no="DEMO-PENDING",
-        entry_date=next_p2.start_date + timedelta(days=2),
-        posting_date=next_p2.start_date + timedelta(days=2),
-        fiscal_period_id=next_p2.id,
-        reference="PENDING",
-        description="Pending maker-checker accrual",
-        status=JournalStatus.DRAFT,
-        created_by_id=user.id,
-    )
-    db.add(draft_entry)
-    db.flush()
-    for line_no, account_code, debit, credit in (
-        (1, "5000", Decimal("275"), Decimal("0")),
-        (2, "2000", Decimal("0"), Decimal("275")),
+    for user_name, role_name in (
+        ("admin", "administrator"),
+        ("preparer", "preparer"),
+        ("approver", "approver"),
     ):
         db.add(
-            JournalLine(
-                id=stable_id(f"{company.code}:demo:draft:line:{line_no}"),
+            Membership(
                 company_id=company.id,
-                entry_id=draft_entry.id,
-                line_no=line_no,
-                account_id=accounts[account_code].id,
-                description="Pending maker-checker accrual",
-                currency_code=company.base_currency_code,
-                exchange_rate=Decimal("1"),
-                debit_original=debit,
-                credit_original=credit,
-                debit_base=debit,
-                credit_base=credit,
+                user_id=users[user_name].id,
+                role_id=roles[role_name].id,
             )
         )
-    db.commit()
-    assert db.scalar(select(ClosingEvent.id).where(ClosingEvent.company_id == company.id))
+    for code, _, _ in CAPABILITIES:
+        db.add(
+            RolePermission(
+                company_id=company.id,
+                role_id=roles["administrator"].id,
+                permission_code=code,
+            )
+        )
+    for role_name, capabilities in (
+        ("preparer", PREPARER_CAPABILITIES),
+        ("approver", APPROVER_CAPABILITIES),
+    ):
+        for code in capabilities:
+            db.add(
+                RolePermission(
+                    company_id=company.id,
+                    role_id=roles[role_name].id,
+                    permission_code=code,
+                )
+            )
+    return users["admin"]
 
 
 def seed(
@@ -395,219 +251,87 @@ def seed(
     admin_password: str = "CTec-Demo-Admin-2026!",
     admin_display_name: str = "Demo Administrator",
     disable_non_admin: bool = False,
+    legacy_data_dir: str | Path | None = None,
 ) -> None:
+    source = _legacy_data_directory(legacy_data_dir)
+    legacy_settings = _settings(source)
+    archive = _archive(source)
     with SessionLocal() as db:
         if db.scalar(select(User.id).limit(1)) is not None:
             print("Seed skipped: data already exists")
             return
-        for code, name, units in (
-            ("SGD", "Singapore Dollar", 2),
-            ("USD", "US Dollar", 2),
-            ("EUR", "Euro", 2),
-        ):
-            db.add(Currency(code=code, name=name, minor_units=units))
-        db.flush()
-        companies = [
-            Company(
-                id=stable_id("company:acme"),
-                code="ACME",
-                name="Acme Trading Pte Ltd",
-                base_currency_code="SGD",
-            ),
-            Company(
-                id=stable_id("company:northstar"),
-                code="NORTH",
-                name="Northstar Services Ltd",
-                base_currency_code="USD",
-            ),
-            Company(
-                id=stable_id("company:edge-cycle"),
-                code="EDGE",
-                name="ZZ Edge Cycle Demonstration Ltd",
-                base_currency_code="SGD",
-            ),
-        ]
-        db.add_all(companies)
-        for code, description, legacy in CAPABILITIES:
-            db.add(Permission(code=code, description=description, legacy_number=legacy))
-        users = {
-            "admin": User(
-                id=stable_id("user:admin"),
-                email=admin_email.lower(),
-                display_name=admin_display_name,
-                password_hash=hash_password(admin_password),
-            ),
-            "preparer": User(
-                id=stable_id("user:preparer"),
-                email="preparer@example.com",
-                display_name="Priya Preparer",
-                password_hash=hash_password(
-                    secrets.token_urlsafe(32)
-                    if disable_non_admin
-                    else "CTec-Demo-Prepare-2026!"
-                ),
-                active=not disable_non_admin,
-            ),
-            "approver": User(
-                id=stable_id("user:approver"),
-                email="approver@example.com",
-                display_name="Alex Approver",
-                password_hash=hash_password(
-                    secrets.token_urlsafe(32)
-                    if disable_non_admin
-                    else "CTec-Demo-Approve-2026!"
-                ),
-                active=not disable_non_admin,
-            ),
-        }
-        db.add_all(users.values())
-        db.flush()
-        for company in companies:
-            admin_role = Role(
-                id=stable_id(f"{company.code}:role:admin"),
-                company_id=company.id,
-                name="Administrator",
-                system=True,
-            )
-            preparer_role = Role(
-                id=stable_id(f"{company.code}:role:preparer"),
-                company_id=company.id,
-                name="Preparer",
-                system=True,
-            )
-            approver_role = Role(
-                id=stable_id(f"{company.code}:role:approver"),
-                company_id=company.id,
-                name="Approver",
-                system=True,
-            )
-            db.add_all([admin_role, preparer_role, approver_role])
-            db.flush()
-            db.add(
-                Membership(company_id=company.id, user_id=users["admin"].id, role_id=admin_role.id)
-            )
-            if company.code != "EDGE":
-                db.add(
-                    Membership(
-                        company_id=company.id,
-                        user_id=users["preparer"].id,
-                        role_id=preparer_role.id,
-                    )
-                )
-                db.add(
-                    Membership(
-                        company_id=company.id,
-                        user_id=users["approver"].id,
-                        role_id=approver_role.id,
-                    )
-                )
-            for code, _, _ in CAPABILITIES:
-                db.add(
-                    RolePermission(
-                        company_id=company.id, role_id=admin_role.id, permission_code=code
-                    )
-                )
-            for code in (
-                "accounts.view",
-                "fiscal.view",
-                "journals.create",
-                "journals.update",
-                "journals.view",
-                "journals.validate",
-                "journals.inquire",
-                "reports.run",
-            ):
-                db.add(
-                    RolePermission(
-                        company_id=company.id, role_id=preparer_role.id, permission_code=code
-                    )
-                )
-            for code in (
-                "accounts.view",
-                "fiscal.view",
-                "journals.view",
-                "journals.approve",
-                "journals.post",
-                "journals.reverse",
-                "journals.inquire",
-                "reports.run",
-                "integrity.run",
-            ):
-                db.add(
-                    RolePermission(
-                        company_id=company.id, role_id=approver_role.id, permission_code=code
-                    )
-                )
-            periods = 12 if company.code == "ACME" else 18
-            add_calendar(db, company, "FY2026", date(2026, 1, 1), periods)
-            add_calendar(
-                db,
-                company,
-                "FY2027",
-                date(2026, 1, 1) + timedelta(days=periods * 28),
-                periods,
-            )
-            account_specs = [
-                (
-                    "1000",
-                    "Cash at Bank",
-                    AccountType.BALANCE_SHEET,
-                    company.base_currency_code,
-                    True,
-                ),
-                (
-                    "1100",
-                    "Trade Receivables",
-                    AccountType.BALANCE_SHEET,
-                    company.base_currency_code,
-                    True,
-                ),
-                (
-                    "2000",
-                    "Trade Payables",
-                    AccountType.BALANCE_SHEET,
-                    company.base_currency_code,
-                    True,
-                ),
-                (
-                    "3000",
-                    "Retained Earnings",
-                    AccountType.RETAINED_EARNINGS,
-                    company.base_currency_code,
-                    True,
-                ),
-                ("4000", "Revenue", AccountType.REVENUE_EXPENSE, company.base_currency_code, True),
-                (
-                    "5000",
-                    "Operating Expenses",
-                    AccountType.REVENUE_EXPENSE,
-                    company.base_currency_code,
-                    True,
-                ),
-                (
-                    "9000",
-                    "STATEMENT OF PROFIT OR LOSS",
-                    AccountType.TITLE,
-                    company.base_currency_code,
-                    False,
-                ),
-                ("6100", "Foreign Currency Expense", AccountType.REVENUE_EXPENSE, "EUR", True),
+        db.add_all(
+            [
+                Currency(code="SGD", name="Singapore Dollar", minor_units=2),
+                Currency(code="USD", name="US Dollar", minor_units=2),
             ]
-            for code, name, account_type, currency, postable in account_specs:
-                db.add(
-                    Account(
-                        id=stable_id(f"{company.code}:account:{code}"),
-                        company_id=company.id,
-                        code=code,
-                        name=name,
-                        account_type=account_type,
-                        currency_code=currency,
-                        postable=postable,
-                    )
-                )
+        )
+        db.flush()
+        company = Company(
+            id=stable_id("company:alcan"),
+            code="ALCAN",
+            name=str(legacy_settings["company_name"])[:120],
+            base_currency_code="SGD",
+            timezone="Asia/Singapore",
+            rounding_places=int(legacy_settings["rounding_places"]),
+            use_bankers_rounding=False,
+        )
+        db.add(company)
+        admin = _add_access_model(
+            db,
+            company,
+            admin_email=admin_email,
+            admin_password=admin_password,
+            admin_display_name=admin_display_name,
+            disable_non_admin=disable_non_admin,
+        )
+        _add_calendar(db, company, legacy_settings)
         db.commit()
-        add_deterministic_accounting_cycle(db, companies[2], users["admin"])
-        print("Seeded deterministic demo companies, users, and accounting cycles")
+
+        staged = stage_archive(
+            db,
+            company_id=company.id,
+            user_id=admin.id,
+            source_name="legacy-sample.zip",
+            archive=archive,
+        )
+        if not bool(staged.reconciliation.get("apply_ready")):
+            raise RuntimeError(
+                "Packaged legacy sample did not reconcile: "
+                f"{staged.reconciliation}; counts={staged.counts}"
+            )
+        applied = apply_run(db, staged, admin.id)
+        expected = {
+            "applied_accounts": 141,
+            "applied_posted_batches": 2,
+            "applied_draft_batches": 0,
+            "applied_reports": 10,
+        }
+        actual = {key: applied.counts.get(key) for key in expected}
+        if actual != expected:
+            raise RuntimeError(f"Legacy seed count mismatch: expected {expected}, got {actual}")
+        if db.scalar(select(func.count(Account.id)).where(Account.company_id == company.id)) != 141:
+            raise RuntimeError("Legacy seed account verification failed")
+        if (
+            db.scalar(
+                select(func.count(JournalBatch.id)).where(JournalBatch.company_id == company.id)
+            )
+            != 2
+        ):
+            raise RuntimeError("Legacy seed journal verification failed")
+        if (
+            db.scalar(
+                select(func.count(ReportDefinition.id)).where(
+                    ReportDefinition.company_id == company.id
+                )
+            )
+            != 10
+        ):
+            raise RuntimeError("Legacy seed report verification failed")
+        print(
+            "Seeded ALCAN from the read-only legacy sample: "
+            "141 accounts, 2 posted batches, 10 legacy reports"
+        )
 
 
 if __name__ == "__main__":

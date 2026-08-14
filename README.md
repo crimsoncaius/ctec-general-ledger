@@ -16,8 +16,9 @@ docker compose exec api python -m app.seed
 docker compose ps
 ```
 
-Open `http://localhost:5173`; API documentation is `http://localhost:8000/docs`. Deterministic
-local credentials and workflows are in `docs/USER_GUIDE.md` and `docs/DEMO_DATA.md`.
+Open `http://localhost:5173`; API documentation is `http://localhost:8000/docs`. The seed imports
+the packaged read-only ALCAN legacy sample; deterministic local credentials and workflows are in
+`docs/USER_GUIDE.md` and `docs/DEMO_DATA.md`.
 Compose starts PostgreSQL, the API, the static web client, and a separate durable-operation worker.
 
 ## Local development
@@ -37,6 +38,9 @@ Set-Location frontend
 npm ci
 npm run dev
 ```
+
+`python -m app.seed` never replaces an existing database. Automated tests use the separate
+`python -m app.test_seed` synthetic fixture entry point.
 
 In another terminal:
 

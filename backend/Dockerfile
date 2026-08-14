@@ -4,10 +4,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
 
 RUN addgroup --system app && adduser --system --ingroup app app
-COPY pyproject.toml ./
-COPY app ./app
-COPY alembic.ini ./
-COPY alembic ./alembic
+COPY backend/pyproject.toml ./
+COPY backend/app ./app
+COPY backend/alembic.ini ./
+COPY backend/alembic ./alembic
+COPY GL_Data /app/legacy-demo
 RUN pip install --no-cache-dir .
 
 USER app

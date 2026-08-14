@@ -1,0 +1,142 @@
+*   PROFIT & LOSS STATEMENT
+*
+*   Data Matrix Specification
+*   Current Balance               A/C Specification
+*   -----------------------------
+A:  [BC]
+*   -----------------------------
+0:  J-O01                       * Opening Stock
+1:  L-P01                       * Purchases Type 1
+2:    =                         *     =
+3:  K-C01                       * Closing Stock
+4:  ^2A + 3A                    * Cost Of Goods Sold
+5:  H-S01                       * Sales
+6:  ^5A + 4A                    *     =
+7:  H-M01                       * Miscellaneous Income
+8:  N-P01                       * Proceeds of Disposed Assets
+9:  ^8A + 7A                    * OTHER INCOME
+10: ^9A + 6A                    * GROSS PROFIT
+11:   =                         * Dummy
+*                                 EXPENSES
+12: M-A01                       * Accounting Fee
+13: M-A02                       * Advertising & Promotion
+14: M-A03                       * Audit Fee
+15: M-B01                       * Bank Charges & Interest
+16: M-B02                       * Bad Debts
+17: M-C01                       * CPF Contribution
+18: M-C02                       * Carriage Inward
+19: M-C03                       * Carriage Outward
+20: M-C04                       * Customs Duty
+21: M-C05                       * Commission
+22: M-D01                       * Depreciation
+23: M-D02                       * Directors' Fee
+24: M-D03                       * Directors' Remuneration
+25: M-D04                       * Donation
+26: M-E01                       * Entertainment
+27: M-F01                       * Skill Development Fund
+28: M-G01                       * General Expenses
+29: M-H01                       * Hire Purchase Interest
+30: M-I01                       * Insurance (Staff)
+31: M-I02                       * Insurance (Office)
+32: M-I03                       * Insurance (Warehouse)
+33: M-L01                       * LC Charges
+34: M-L02                       * Legal Fee
+35: M-M01                       * Medical Expenses
+36: M-M02                       * Management Fee
+37: M-P01                       * Professional Fee
+38: M-P02                       * Postage & Stamps
+39: M-R01                       * Rent (Office)
+40: M-R02                       * Rent (Warehouse)
+41: M-R03                       * Repairs & Maintenance
+42: M-S01                       * Stationery & Printing
+43: M-S02                       * Secretarial Fee
+44: M-S03                       * Staff Salaries & Bonus
+45: M-S04                       * Staff Training
+46: M-T01                       * Transport
+47: M-T02                       * Travelling Expenses
+48: M-T03                       * Telephone Expenses
+49: M-U01                       * Upkeep of Motor Vehicles
+50: M-U02                       * Utilities
+51:   =                         * Total Expenses
+52: ^10A + 51A                  * NET PROFIT FOR THE YEAR
+$------------------REPORT STARTS BELOW-----------------------
+                           ALCAN GENERAL TRADING PTE LTD
+                       PROFIT & LOSS STATEMENT AS AT &d
+
+ [Page 1 of 2]
+
+                                       Amount S$          Amount S$           Amount S$
+                                      -----------        -----------         -----------
+
+SALES                                                                      !5A1 (      !     
+
+Less COST OF GOODS SOLD
+     ------------------
+     Opening Stock                 !0A1 (      !
+     Purchases                     !1A1 (      !       !2A1 (      !
+                                   -------------
+     Less Closing Stock                                
+                                                       !3A1 (      !       !4A1(       !
+                                                       -------------       -------------
+                                                                           !6A1(       !
+Add  OTHER INCOME                                                          !9A1(       !  
+     ------------                                                          -------------
+
+     GROSS PROFIT                                                          !10A1(      !
+
+Less OPERATING EXPENSES
+     ------------------
+     Accounting Fee                                    !12A1(      !
+     Advertising & Promotion                           !13A1(      !
+     Audit Fee                                         !14A1(      !
+     Bank Charges & Interest                           !15A1(      !
+     Bad Debts                                         !16A1(      !
+     CPF Contribution                                  !17A1(      !
+     Carriage Inward                                   !18A1(      !
+     Carriage Outward                                  !19A1(      !
+     Customs Duty                                      !20A1(      !
+     Commission                                        !21A1(      !
+     Depreciation                                      !22A1(      !
+     Directors' Fee                                    !23A1(      !
+     Director's Remuneration                           !24A1(      !
+     Donation                                          !25A1(      !
+     Entertainment                                     !26A1(      !
+     Skill Development Fund                            !27A1(      !
+     General Expenses                                  !28A1(      !
+     Hire Purchase Interest                            !29A1(      !
+     Insurance (Staff)                                 !30A1(      !
+     Insuranace (Office)                               !31A1(      !
+     Insurance (Warehouse)                             !32A1(      !
+     LC Charges                                        !33A1(      !
+     Legal Fee                                         !34A1(      !
+     Medical Expenses                                  !35A1(      !
+     Management Fee                                    !36A1(      !
+     Professional Fee                                  !37A1(      !
+     Postage & Stamps                                  !38A1(      !
+     Rent (Office)                                     !39A1(      !
+     Rent (Warehouse)                                  !40A1(      !
+     Repairs & Maintenance                             !41A1(      !
+
+     ...... continue next page
+&P
+                           ALCAN GENERAL TRADING PTE LTD
+                       PROFIT & LOSS STATEMENT AS AT &d
+
+ [Page 2 of 2]
+
+
+     Stationery & Printing                             !42A1(      !
+     Secretarial Fee                                   !43A1(      !
+     Staff Salaries & Bonus                            !44A1(      !
+     Staff Training                                    !45A1(      !
+     Transport                                         !46A1(      !
+     Travelling Expenses                               !47A1(      !
+     Telephone Expenses                                !48A1(      !
+     Upkeep Of Motor Vehicle                           !49A1(      !
+     Utilities                                         !50A1(      !       !51A1(      !
+                                                       -------------       -------------
+     NET (PROFIT)/LOSS                                                     !52A1(      !
+                                                                           =============
+
+
+                            ***** End of Statement *****

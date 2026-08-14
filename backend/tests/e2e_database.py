@@ -53,7 +53,7 @@ def add_restricted_browser_user() -> None:
     from app.db import SessionLocal
     from app.models import Membership, Permission, Role, RolePermission, User
     from app.security import hash_password
-    from app.seed import stable_id
+    from app.seed_support import stable_id
 
     with SessionLocal() as db:
         company_id = stable_id("company:acme")
@@ -101,7 +101,7 @@ def prepare_database(url: URL) -> None:
     alembic = Config("backend/alembic.ini")
     command.upgrade(alembic, "head")
 
-    from app.seed import seed
+    from app.test_seed import seed
 
     seed()
     add_restricted_browser_user()

@@ -18,13 +18,15 @@ services:
 
   api:
     build:
-      context: ./backend
+      context: .
+      dockerfile: backend/Dockerfile
     environment:
       ENVIRONMENT: ${ENVIRONMENT:-development}
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-ctec}:${POSTGRES_PASSWORD:-ctec_local_only}@db:5432/${POSTGRES_DB:-ctec_gl}
       JWT_SECRET: ${JWT_SECRET:-development-secret-change-before-use-123456}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
       INLINE_OPERATION_JOBS: "false"
+      LEGACY_DEMO_DATA_DIR: /app/legacy-demo
     ports:
       - "8000:8000"
     depends_on:
@@ -38,7 +40,8 @@ services:
 
   worker:
     build:
-      context: ./backend
+      context: .
+      dockerfile: backend/Dockerfile
     command: ["python", "-m", "app.worker"]
     environment:
       ENVIRONMENT: ${ENVIRONMENT:-development}
