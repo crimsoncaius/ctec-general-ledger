@@ -1,3 +1,4 @@
+import secrets
 import uuid
 from datetime import date, timedelta
 from decimal import Decimal
@@ -388,7 +389,13 @@ def add_deterministic_accounting_cycle(db: Session, company: Company, user: User
     assert db.scalar(select(ClosingEvent.id).where(ClosingEvent.company_id == company.id))
 
 
-def seed() -> None:
+def seed(
+    *,
+    admin_email: str = "admin@example.com",
+    admin_password: str = "CTec-Demo-Admin-2026!",
+    admin_display_name: str = "Demo Administrator",
+    disable_non_admin: bool = False,
+) -> None:
     with SessionLocal() as db:
         if db.scalar(select(User.id).limit(1)) is not None:
             print("Seed skipped: data already exists")
@@ -426,21 +433,31 @@ def seed() -> None:
         users = {
             "admin": User(
                 id=stable_id("user:admin"),
-                email="admin@example.com",
-                display_name="Demo Administrator",
-                password_hash=hash_password("CTec-Demo-Admin-2026!"),
+                email=admin_email.lower(),
+                display_name=admin_display_name,
+                password_hash=hash_password(admin_password),
             ),
             "preparer": User(
                 id=stable_id("user:preparer"),
                 email="preparer@example.com",
                 display_name="Priya Preparer",
-                password_hash=hash_password("CTec-Demo-Prepare-2026!"),
+                password_hash=hash_password(
+                    secrets.token_urlsafe(32)
+                    if disable_non_admin
+                    else "CTec-Demo-Prepare-2026!"
+                ),
+                active=not disable_non_admin,
             ),
             "approver": User(
                 id=stable_id("user:approver"),
                 email="approver@example.com",
                 display_name="Alex Approver",
-                password_hash=hash_password("CTec-Demo-Approve-2026!"),
+                password_hash=hash_password(
+                    secrets.token_urlsafe(32)
+                    if disable_non_admin
+                    else "CTec-Demo-Approve-2026!"
+                ),
+                active=not disable_non_admin,
             ),
         }
         db.add_all(users.values())
